@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PT Plan Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1c1b19;--paper:#f6f1e9;--cream:#ede6d8;--warm:#d8cfc0;
+  --accent:#9b3d1f;--accent-light:#c4623e;--green:#2e4a30;--green-light:#4a7a4d;
+  --mid:#7a6e5f;--light:#faf7f2;
+  --serif:'Cormorant Garamond',Georgia,serif;--sans:'Jost',system-ui,sans-serif;
+  --shadow:0 2px 16px rgba(28,27,25,.10);--shadow-lg:0 8px 40px rgba(28,27,25,.18);
+  --radius:6px;--transition:all .18s ease;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6}
+
+/* LOCK */
+#lock-screen{position:fixed;inset:0;z-index:9999;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:32px}
+#lock-screen.hidden{display:none}
+.lock-logo{font-family:var(--serif);color:var(--paper);font-size:2.8rem;font-weight:600;letter-spacing:.04em;text-align:center;line-height:1.1}
+.lock-logo span{display:block;font-size:.95rem;font-weight:300;letter-spacing:.2em;text-transform:uppercase;color:var(--warm);margin-top:8px;font-family:var(--sans)}
+.lock-form{display:flex;flex-direction:column;gap:12px;align-items:center;width:300px}
+.lock-form input{width:100%;padding:14px 18px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:var(--paper);border-radius:var(--radius);font-family:var(--sans);font-size:1rem;letter-spacing:.15em;text-align:center;outline:none;transition:var(--transition)}
+.lock-form input:focus{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.12)}
+.lock-form input::placeholder{color:rgba(255,255,255,.3);letter-spacing:.1em}
+.lock-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:var(--sans);font-size:.9rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:var(--transition)}
+.lock-btn:hover{background:var(--accent-light)}
+.lock-error{color:#e07a5f;font-size:.85rem;letter-spacing:.05em;min-height:20px;text-align:center}
+
+/* HEADER */
+#app{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--ink);color:var(--paper);padding:0 28px;display:flex;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.35);height:60px}
+.header-title{font-family:var(--serif);font-size:1.45rem;font-weight:600;letter-spacing:.04em;flex:1;display:flex;align-items:center;gap:12px}
+.header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0}
+.nav-tabs{display:flex;height:100%}
+.nav-tab{background:none;border:none;color:rgba(255,255,255,.45);padding:0 20px;cursor:pointer;font-family:var(--sans);font-size:.78rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;border-bottom:2px solid transparent;transition:var(--transition);height:100%;display:flex;align-items:center;white-space:nowrap}
+.nav-tab:hover{color:rgba(255,255,255,.75)}
+.nav-tab.active{color:var(--paper);border-bottom-color:var(--accent)}
+.header-actions{display:flex;gap:8px;margin-left:16px}
+.btn-icon{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);padding:7px 12px;border-radius:var(--radius);cursor:pointer;font-family:var(--sans);font-size:.75rem;font-weight:500;letter-spacing:.06em;transition:var(--transition);white-space:nowrap}
+.btn-icon:hover{background:rgba(255,255,255,.15);color:var(--paper)}
+
+main{flex:1;padding:28px}
+.view{display:none}
+.view.active{display:block}
+
+/* DATABASE */
+.db-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--light);border:1px solid var(--warm);border-radius:var(--radius);padding:14px 18px;margin-bottom:22px}
+.search-wrap{flex:1;min-width:180px;position:relative}
+.search-wrap input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--warm);background:#fff;border-radius:var(--radius);font-family:var(--sans);font-size:.88rem;outline:none;transition:var(--transition);color:var(--ink)}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--mid);pointer-events:none;font-size:.95rem}
+.filter-select{padding:9px 12px;border:1px solid var(--warm);background:#fff;border-radius:var(--radius);font-family:var(--sans);font-size:.82rem;color:var(--ink);outline:none;cursor:pointer;transition:var(--transition)}
+.filter-select:focus{border-color:var(--accent)}
+.db-count{font-size:.78rem;color:var(--mid);letter-spacing:.05em;white-space:nowrap}
+.category-section{margin-bottom:26px}
+.category-header{font-family:var(--serif);font-size:1.25rem;font-weight:600;color:var(--green);border-bottom:2px solid var(--green);padding-bottom:5px;margin-bottom:12px;letter-spacing:.02em}
+.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:9px}
+.exercise-card{background:#fff;border:1px solid var(--warm);border-radius:var(--radius);padding:13px 15px;cursor:pointer;transition:var(--transition);display:flex;flex-direction:column;gap:6px;position:relative}
+.exercise-card:hover{border-color:var(--accent);box-shadow:var(--shadow);transform:translateY(-1px)}
+.exercise-name{font-weight:500;font-size:.92rem;color:var(--ink);line-height:1.3}
+.exercise-meta{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-size:.68rem;padding:2px 7px;border-radius:20px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.tag-equip{background:var(--cream);color:var(--mid)}
+.tag-uni{background:#e8f0e8;color:var(--green)}
+.tag-bi{background:var(--cream);color:var(--mid)}
+.card-add-btn{position:absolute;top:9px;right:9px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--transition)}
+.exercise-card:hover .card-add-btn{opacity:1}
+.card-add-btn:hover{background:var(--accent-light);transform:scale(1.1)}
+
+/* BUILDER LAYOUT */
+.builder-layout{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+@media(max-width:900px){.builder-layout{grid-template-columns:1fr}}
+.panel{background:var(--light);border:1px solid var(--warm);border-radius:var(--radius);padding:22px}
+.panel-title{font-family:var(--serif);font-size:1.35rem;font-weight:600;margin-bottom:16px;color:var(--ink);padding-bottom:10px;border-bottom:1px solid var(--warm)}
+
+/* PLAN META */
+.plan-meta{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.field-group{display:flex;flex-direction:column;gap:3px}
+.field-label{font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mid)}
+.field-input{padding:9px 13px;border:1px solid var(--warm);background:#fff;border-radius:var(--radius);font-family:var(--sans);font-size:.92rem;color:var(--ink);outline:none;transition:var(--transition)}
+.field-input:focus{border-color:var(--accent)}
+.field-input::placeholder{color:var(--warm)}
+
+/* MINI EXERCISE LIST */
+.mini-search{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.mini-search input,.mini-search select{padding:8px 11px;border:1px solid var(--warm);background:#fff;border-radius:var(--radius);font-family:var(--sans);font-size:.82rem;color:var(--ink);outline:none;transition:var(--transition)}
+.mini-search input{flex:1;min-width:130px}
+.mini-search input:focus,.mini-search select:focus{border-color:var(--accent)}
+.mini-exercise-list{max-height:320px;overflow-y:auto;border:1px solid var(--warm);border-radius:var(--radius);background:#fff}
+.mini-exercise-item{padding:9px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cream);transition:var(--transition);font-size:.86rem;gap:8px}
+.mini-exercise-item:last-child{border-bottom:none}
+.mini-exercise-item:hover{background:var(--cream)}
+.mini-exercise-item .ex-info{flex:1;min-width:0}
+.mini-exercise-item .ex-info div{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-exercise-item .ex-info span{color:var(--mid);font-size:.72rem}
+.mini-add-group{display:flex;gap:4px;flex-shrink:0}
+.mini-add{border:none;border-radius:3px;padding:4px 8px;font-size:.72rem;cursor:pointer;transition:var(--transition);font-family:var(--sans);font-weight:500;white-space:nowrap}
+.mini-add-new{background:var(--accent);color:#fff}
+.mini-add-new:hover{background:var(--accent-light)}
+.mini-add-existing{background:var(--green);color:#fff}
+.mini-add-existing:hover{background:var(--green-light)}
+
+/* SUPERSET GROUPS */
+.plan-groups{display:flex;flex-direction:column;gap:14px}
+.plan-empty{text-align:center;padding:36px;color:var(--mid);font-size:.88rem;font-style:italic;border:2px dashed var(--warm);border-radius:var(--radius)}
+
+.superset-group{background:#fff;border:1px solid var(--warm);border-radius:var(--radius);overflow:hidden}
+.group-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--ink);color:var(--paper)}
+.group-letter{font-family:var(--serif);font-size:1.4rem;font-weight:600;color:var(--paper);min-width:24px}
+.group-controls{display:flex;align-items:center;gap:10px;flex:1;flex-wrap:wrap}
+.group-ctrl{display:flex;align-items:center;gap:5px}
+.group-ctrl label{font-size:.7rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);white-space:nowrap}
+.group-ctrl input{padding:4px 7px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:var(--paper);border-radius:3px;font-family:var(--sans);font-size:.83rem;width:65px;outline:none;transition:var(--transition)}
+.group-ctrl input:focus{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.18)}
+.group-remove{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem;padding:2px 5px;border-radius:3px;transition:var(--transition);margin-left:auto}
+.group-remove:hover{background:rgba(255,255,255,.1);color:#e07a5f}
+
+/* EXERCISE WITHIN GROUP */
+.group-exercises{display:flex;flex-direction:column}
+.group-exercise{border-top:1px solid var(--cream)}
+.gex-header{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--cream)}
+.gex-label{font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--green);min-width:28px}
+.gex-name{font-weight:500;font-size:.88rem;flex:1;color:var(--ink)}
+.gex-equip{font-size:.72rem;color:var(--mid)}
+.gex-remove{background:none;border:none;color:var(--mid);cursor:pointer;font-size:.9rem;padding:2px 5px;border-radius:3px;transition:var(--transition)}
+.gex-remove:hover{background:#fde8e4;color:var(--accent)}
+.gex-body{padding:11px 14px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.gex-field{display:flex;flex-direction:column;gap:3px}
+.gex-field label{font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)}
+.gex-field input,.gex-field textarea{padding:6px 8px;border:1px solid var(--warm);border-radius:4px;font-family:var(--sans);font-size:.83rem;color:var(--ink);outline:none;transition:var(--transition);background:#fff;width:100%}
+.gex-field input:focus,.gex-field textarea:focus{border-color:var(--accent)}
+.gex-field textarea{resize:vertical;min-height:54px}
+.gex-full{grid-column:1/-1}
+
+.group-footer{padding:8px 14px;background:var(--light);border-top:1px solid var(--cream);display:flex;align-items:center;justify-content:space-between}
+.group-footer-hint{font-size:.73rem;color:var(--mid);font-style:italic}
+
+/* PLAN ACTIONS */
+.plan-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--warm)}
+.btn{padding:9px 18px;border-radius:var(--radius);font-family:var(--sans);font-size:.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:var(--transition);border:none;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-light)}
+.btn-secondary{background:var(--green);color:#fff}
+.btn-secondary:hover{background:var(--green-light)}
+.btn-outline{background:transparent;border:1.5px solid var(--warm);color:var(--mid)}
+.btn-outline:hover{border-color:var(--ink);color:var(--ink)}
+.btn-danger{background:transparent;border:1.5px solid #e07a5f;color:#c0442a}
+.btn-danger:hover{background:#fde8e4}
+
+/* SAVED PLANS */
+.plans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.plan-card{background:#fff;border:1px solid var(--warm);border-radius:var(--radius);padding:18px;transition:var(--transition)}
+.plan-card:hover{border-color:var(--accent-light);box-shadow:var(--shadow)}
+.plan-card-title{font-family:var(--serif);font-size:1.25rem;font-weight:600;margin-bottom:3px}
+.plan-card-client{font-size:.82rem;color:var(--mid);margin-bottom:9px}
+.plan-card-meta{font-size:.78rem;color:var(--mid);display:flex;gap:14px;flex-wrap:wrap}
+.plan-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--cream)}
+.btn-sm{padding:6px 12px;border-radius:4px;font-family:var(--sans);font-size:.73rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:var(--transition);border:none}
+.btn-sm-primary{background:var(--accent);color:#fff}
+.btn-sm-primary:hover{background:var(--accent-light)}
+.btn-sm-green{background:var(--green);color:#fff}
+.btn-sm-green:hover{background:var(--green-light)}
+.btn-sm-danger{background:transparent;border:1.5px solid #e07a5f;color:#c0442a}
+.btn-sm-danger:hover{background:#fde8e4}
+.no-plans{text-align:center;padding:60px;color:var(--mid);font-size:.95rem;font-style:italic}
+
+/* DRAG */
+.dragging{opacity:.35}
+.drag-over-group{border-top:3px solid var(--accent)!important}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9998;background:var(--ink);color:var(--paper);padding:11px 20px;border-radius:var(--radius);font-size:.86rem;font-weight:500;letter-spacing:.04em;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(8px);transition:opacity .22s,transform .22s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-left:3px solid var(--green-light)}
+.toast.error{border-left:3px solid var(--accent)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--warm);border-radius:3px}
+
+/* PRINT */
+@media print{
+  #lock-screen,header,#view-db,#view-builder,#view-plans,.toast{display:none!important}
+  #print-area{display:block!important}
+  body{background:#fff;font-family:Georgia,serif;font-size:11pt}
+  .pw{padding:15mm 18mm;font-family:Georgia,serif}
+  .ph{border-bottom:2pt solid #222;padding-bottom:8pt;margin-bottom:14pt}
+  .ph-eyebrow{font-size:7.5pt;text-transform:uppercase;letter-spacing:.12em;color:#888;font-family:Arial,sans-serif;margin-bottom:3pt}
+  .ph-title{font-size:20pt;font-weight:700;margin-bottom:2pt}
+  .ph-client{font-size:11pt;color:#555;margin-bottom:2pt}
+  .ph-date{font-size:8.5pt;color:#999}
+  .pg{page-break-inside:avoid;margin-bottom:12pt;border:1px solid #ddd;border-radius:3pt;overflow:hidden}
+  .pg-header{background:#222;color:#fff;padding:6pt 10pt;display:flex;align-items:center;gap:10pt}
+  .pg-letter{font-size:14pt;font-weight:700;font-family:Georgia,serif;min-width:20pt}
+  .pg-meta{font-size:8pt;font-family:Arial,sans-serif;color:#ccc}
+  .pg-meta b{color:#fff}
+  .pe{border-top:1px solid #eee}
+  .pe-header{background:#f5f5f5;padding:5pt 10pt;display:flex;gap:8pt;align-items:center}
+  .pe-label{font-size:10pt;font-weight:700;font-family:Georgia,serif;color:#2e4a30;min-width:24pt}
+  .pe-name{font-size:10pt;font-weight:600}
+  .pe-sub{font-size:8pt;color:#777}
+  .pe-body{padding:5pt 10pt;display:grid;grid-template-columns:60pt 60pt 60pt 1fr 1fr;gap:6pt;font-size:8.5pt;font-family:Arial,sans-serif}
+  .pe-cell label{display:block;font-size:7pt;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:1pt}
+  .pe-cell .val{font-weight:600;color:#222}
+  .pe-notes{grid-column:4/5;color:#444;line-height:1.4}
+  .pe-breath{grid-column:5/6;color:#444;line-height:1.4;font-style:italic}
+}
+#print-area{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock-screen">
+  <div class="lock-logo">PT Plan Builder<span>Personal Training · Workout Plans</span></div>
+  <div class="lock-form">
+    <input type="password" id="pw-input" placeholder="Enter password" autocomplete="current-password">
+    <button class="lock-btn" onclick="checkPassword()">Enter</button>
+    <div class="lock-error" id="lock-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="header-title"><span class="header-dot"></span>PT Plan Builder</div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="switchView('db')">Exercise Database</button>
+      <button class="nav-tab" onclick="switchView('builder')">Plan Builder</button>
+      <button class="nav-tab" onclick="switchView('plans')">Saved Plans</button>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-icon" onclick="exportData()">⬇ Export</button>
+      <button class="btn-icon" onclick="document.getElementById('import-file').click()">⬆ Import</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </header>
+
+  <main>
+    <!-- DATABASE VIEW -->
+    <div id="view-db" class="view active">
+      <div class="db-controls">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="db-search" placeholder="Search exercises…" oninput="renderDB()">
+        </div>
+        <select class="filter-select" id="db-category" onchange="renderDB()">
+          <option value="">All Categories</option>
+          <option>Warm-Up / Mobility</option>
+          <option>Lower Body — Squat</option>
+          <option>Lower Body — Hinge</option>
+          <option>Lower Body — Lunge</option>
+          <option>Lower Body — Other</option>
+          <option>Upper Body — Push</option>
+          <option>Upper Body — Pull</option>
+          <option>Core</option>
+          <option>Glutes / Rehab</option>
+          <option>Carries / Loaded Movement</option>
+        </select>
+        <select class="filter-select" id="db-equip" onchange="renderDB()">
+          <option value="">All Equipment</option>
+          <option>Bodyweight</option>
+          <option>Dumbbell</option>
+          <option>Kettlebell</option>
+          <option>Band</option>
+          <option>Barbell</option>
+          <option>Dowel</option>
+          <option>Foam roller</option>
+          <option>Doorframe</option>
+          <option>Weight plate</option>
+        </select>
+        <select class="filter-select" id="db-uni" onchange="renderDB()">
+          <option value="">Uni / Bilateral</option>
+          <option value="Yes">Unilateral</option>
+          <option value="No">Bilateral</option>
+        </select>
+        <span class="db-count" id="db-count"></span>
+      </div>
+      <div id="db-results"></div>
+    </div>
+
+    <!-- BUILDER VIEW -->
+    <div id="view-builder" class="view">
+      <div class="builder-layout">
+        <!-- LEFT: exercise picker -->
+        <div class="panel" style="position:sticky;top:76px">
+          <div class="panel-title">Add Exercises</div>
+          <div class="mini-search">
+            <input type="text" id="b-search" placeholder="Search…" oninput="renderBuilderList()">
+            <select id="b-cat" onchange="renderBuilderList()">
+              <option value="">All Categories</option>
+              <option>Warm-Up / Mobility</option>
+              <option>Lower Body — Squat</option>
+              <option>Lower Body — Hinge</option>
+              <option>Lower Body — Lunge</option>
+              <option>Lower Body — Other</option>
+              <option>Upper Body — Push</option>
+              <option>Upper Body — Pull</option>
+              <option>Core</option>
+              <option>Glutes / Rehab</option>
+              <option>Carries / Loaded Movement</option>
+            </select>
+            <select id="b-equip" onchange="renderBuilderList()">
+              <option value="">All Equipment</option>
+              <option>Bodyweight</option>
+              <option>Dumbbell</option>
+              <option>Kettlebell</option>
+              <option>Band</option>
+              <option>Barbell</option>
+              <option>Dowel</option>
+            </select>
+          </div>
+          <div style="font-size:.72rem;color:var(--mid);margin-bottom:6px;font-style:italic">
+            <b style="font-style:normal">New group</b> = start a new superset &nbsp;·&nbsp; <b style="font-style:normal">Add to last</b> = add to current group
+          </div>
+          <div class="mini-exercise-list" id="builder-list"></div>
+        </div>
+
+        <!-- RIGHT: plan editor -->
+        <div class="panel">
+          <div class="panel-title" id="builder-plan-label">New Plan</div>
+          <div class="plan-meta">
+            <div class="field-group">
+              <label class="field-label">Client Name</label>
+              <input class="field-input" type="text" id="plan-client" placeholder="e.g. Sarah" oninput="markDirty()">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Plan Title</label>
+              <input class="field-input" type="text" id="plan-title" placeholder="e.g. Week 3 Full Body" oninput="markDirty()">
+            </div>
+          </div>
+          <div class="plan-groups" id="plan-groups">
+            <div class="plan-empty">Add exercises from the left panel to build your plan</div>
+          </div>
+          <div class="plan-actions">
+            <button class="btn btn-primary" onclick="savePlan()">💾 Save Plan</button>
+            <button class="btn btn-secondary" onclick="printPlan()">🖨 Print / PDF</button>
+            <button class="btn btn-outline" onclick="newPlan()">＋ New Plan</button>
+            <button class="btn btn-danger" onclick="clearPlan()">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVED PLANS VIEW -->
+    <div id="view-plans" class="view">
+      <div id="plans-container"></div>
+    </div>
+  </main>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── PASSWORD ── */
+const PASSWORD = 'fitplan2025';
+function checkPassword(){
+  const v = document.getElementById('pw-input').value;
+  if(v === PASSWORD){
+    document.getElementById('lock-screen').classList.add('hidden');
+  } else {
+    const e = document.getElementById('lock-error');
+    e.textContent = 'Incorrect password — try again';
+    document.getElementById('pw-input').value = '';
+    setTimeout(()=>e.textContent='', 3000);
+  }
+}
+document.getElementById('pw-input').addEventListener('keydown', e=>{ if(e.key==='Enter') checkPassword(); });
+
+/* ── EXERCISE DATABASE ── */
+const EXERCISES = [
+  // WARM-UP / MOBILITY
+  {name:"Dowel exercises",cat:"Warm-Up / Mobility",equip:"Dowel",uni:"No",notes:"Work through full range of motion with the dowel overhead, focus on shoulder mobility and thoracic extension."},
+  {name:"Foam roller extension",cat:"Warm-Up / Mobility",equip:"Foam roller",uni:"No",notes:"Place roller perpendicular to spine at mid-back. Support head, let chest open. Breathe and relax into extension."},
+  {name:"Scapular press-ups (wall or quadruped)",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Keep arms straight, move only the shoulder blades — protract and retract. Think of your scapulae as wings spreading and closing."},
+  {name:"Cat/Cow",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"On all fours, alternate between rounding the spine fully (cat) and extending it (cow). Move with breath — exhale to round, inhale to extend."},
+  {name:"Kneeling lunge windmill",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From a kneeling lunge, reach the top arm up and back, rotating through the thoracic spine. Keep hips square. Follow your hand with your eyes."},
+  {name:"Wall crawls",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Stand facing wall, walk hands up as high as possible keeping arms straight and shoulders away from ears. Walk back down with control."},
+  {name:"Shoulder dislocates",cat:"Warm-Up / Mobility",equip:"Dowel",uni:"No",notes:"Hold dowel wide with straight arms. Pass it overhead and behind, then return. Only go as wide as needed to complete the movement pain-free. Gradually narrow grip over time."},
+  {name:"Walkouts",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Hinge at hips, place hands on floor, walk out to a plank position. Pause. Walk back, stand tall. Keep legs as straight as comfortable."},
+  {name:"Best Stretch in the World",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From a lunge, place same-side hand on the floor. Rotate the top arm up to the ceiling, following with your gaze. Alternate sides. Move slowly and breathe."},
+  {name:"Quad stretch to hamstring sweep",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From standing, pull heel to glute for a quad stretch, then hinge forward and sweep the leg back to feel hamstring. Alternate sides with control."},
+  {name:"Hip switches",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Sit on the floor with knees bent to one side. Lift the hips and switch knees to the other side in a fluid motion. Keep movement smooth and controlled."},
+  {name:"Alternating lunge with cervical twist",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Step into a lunge. At the bottom, gently rotate your head to look over the front shoulder. Return to center, step back, and alternate."},
+  {name:"Active shoulder circles",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Circle the arms slowly in both directions, moving from the shoulder blade. Keep the movement large and controlled. Feel the full range of the joint."},
+  {name:"Supine dowel stretches",cat:"Warm-Up / Mobility",equip:"Dowel",uni:"No",notes:"Lying on your back, use the dowel to assist shoulder and thoracic mobility stretches. Move slowly and breathe into each position."},
+  {name:"Half kneeling rotation",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"In a half-kneeling position, hands behind head. Rotate the torso toward the front leg. Keep hips square. Breathe out as you rotate."},
+  {name:"All 4's to Child's pose",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From all fours, sit hips back toward heels into child's pose, reaching arms forward. Push back up through all fours. Move with breath."},
+  {name:"Dynamic thread the needle",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From all fours, thread one arm under the body, rotating the spine. Return and reach the same arm to the ceiling. Keep the movement flowing."},
+  {name:"Squat-forward bend-stand",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Squat down, place hands on floor, straighten legs into a forward fold, then stand tall. Reverse back down. Move slowly and breathe."},
+  {name:"Hip hinge-table stretch",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Hinge at the hips with a flat back, arms extended forward onto a surface. Feel the stretch through the posterior chain. Hold briefly, then stand."},
+  {name:"Bird Dog (mobility)",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"Yes",notes:"From all fours, extend opposite arm and leg simultaneously. Keep spine neutral and avoid any lateral shift in the hips. Move slowly with control."},
+  {name:"Squat/twist/press/stand",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Squat down, twist to one side, press both arms up, then stand. Alternate the twist each rep. A great full-body warm-up integrating multiple planes."},
+  {name:"Thoracic extension at the wall",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Stand a leg-length from wall. Hinge hips back so torso tips forward parallel to floor, arms reaching to wall. Then push hips forward to stand, hands by sides."},
+  {name:"Lateral squats (mobility)",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Feet wide, toes out slightly. Shift weight to one side, bending the knee and sending the hip back. Keep the opposite leg straight. Push back to center."},
+  {name:"Windmill (mobility)",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Feet wide, one arm reaches up. Hinge toward the opposite foot, letting the top arm stay vertical. Feel the rotation through the torso. Reverse with control."},
+  {name:"Adductor lunge",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Step wide to one side into a lateral lunge. Sit into the hip, keeping the chest up. Drive back through the heel to return. Focus on inner thigh stretch."},
+  {name:"Adductor rock back",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"In a wide kneeling stance, rock one hip back toward the heel while the other leg stays extended to the side. Feel the inner thigh stretch. Rock gently back and forth."},
+  {name:"All 4's shoulder mobilisation into thread the needle",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From all fours, reach one arm out to the side and then thread it under the body, rotating through the thoracic spine. Return and repeat."},
+  {name:"Elegant frog",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"From a deep squat with feet wide and toes out, press knees open with elbows. Tall spine. Breathe and settle deeper with each exhale. Can be used as a squat warm-up."},
+  {name:"Yoga flow (All 4's → Downward Dog → Child's pose)",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Flow between all fours, downward dog and child's pose with breath and awareness. Take your time in each position. A great way to warm up the whole body."},
+  {name:"Hip switch adductor hinge",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Combine a hip switch with an adductor stretch and hip hinge. Move between positions fluidly to warm up the hips, inner thighs, and posterior chain."},
+  {name:"Scapular press-ups in plank",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"In a full plank, protract and retract the shoulder blades while keeping the arms straight and body rigid. Focus on movement coming purely from the scapulae."},
+  {name:"Supine Twist / Opening the Book",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Lie on your side with knees stacked and bent. Open the top arm back to the floor behind you, rotating the thoracic spine. Let gravity do the work. Breathe into it."},
+  {name:"Windscreen Wipers",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Lying on back, knees bent at 90 degrees. Let both knees fall together to one side, then the other. Keep shoulders grounded. Relaxed version — let gravity lead."},
+  {name:"Standing Shoulder Angels",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Stand with back to wall, arms in goalpost position. Try to keep everything in contact with the wall as you slide arms up into a Y position and back down. Slow and controlled."},
+  {name:"TVA Breathing and Release",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Focus on diaphragmatic breathing, 360-degree expansion on inhale, gentle drawing in on exhale. Connect with your core container before loading the body."},
+  {name:"Sitting Side Stretch",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"Cross-legged, extend one arm out to the side for support as you reach the other up and over. Bend the bottom elbow to increase range if desired. Float gently between sides."},
+  {name:"Kneeling Side Stretches and Lifts",cat:"Warm-Up / Mobility",equip:"Bodyweight",uni:"No",notes:"In adductor rock-back position, reach same-side arm down as you tip away from the extended leg. Reach up and over. Float back up, reaching along the extended leg to the other side."},
+  // LOWER BODY — SQUAT
+  {name:"1.5 Goblet Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Hold one heavy DB between hands. Descend to full depth, come halfway up, lower again, then all the way up. That's one rep. Slow and controlled throughout. Keep your springs/neutral spine."},
+  {name:"1.5 Front Squat (Zercher/bicep curl grip)",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Bicep curl DBs into front of shoulders. Descend, come halfway up, lower again, then stand. Keep chest tall and springs active throughout."},
+  {name:"Box Squat",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"No",notes:"Squat back to lightly touch a box or chair — don't sit fully. Keep weight in heels, chest up, and drive back up to standing. The box is a target, not a rest."},
+  {name:"Heel Elevated Goblet Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Heels raised on a small plate or wedge. Hold DB in goblet position. Send hips back as knees and ankles bend forwards. Keep neutral spine. Focus on depth and glute connection."},
+  {name:"Goblet Squat to Chair",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Hold DB in goblet position. Slowly sit back to the chair with control — light touch only. Drive back up through the heels, pulling weight back into chest as you stand."},
+  {name:"Squat to Chair",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"No",notes:"Slow, controlled descent to sit back on the chair. Light touch and strong return to standing. Push weight away lightly as you lower to help find the depth."},
+  {name:"Front DB Pause Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"DBs at front of shoulders. Descend with control to full depth, pause for a breath, then drive up. The pause removes momentum — pure strength."},
+  {name:"Goblet Pause Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Hold DB in goblet position. Descend to full depth, pause for a full breath, then drive back up. Focus on keeping knees tracking over toes throughout."},
+  {name:"Heel Elevated Squat",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"No",notes:"Heels raised slightly. Send hips back as knees and ankles bend forwards. Keep springs/neutral spine. Focus on ease and overall quality of movement. Slow, steady and controlled."},
+  {name:"Front DB Squat (2 DB)",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Hold one DB in each hand at shoulder height. Keep elbows up. Descend with control, keeping chest tall and core engaged. Drive through the full foot to return."},
+  {name:"Wall Sit",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"No",notes:"Press the whole back flat against the wall, thighs parallel to the floor. Breathe steadily. Try to avoid tensing the jaw and shoulders — find stillness in the challenge."},
+  {name:"Bear Squat",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"No",notes:"From a bear plank position, sit hips back toward heels, keeping knees just off the floor. Return to bear position. Focuses on hip flexion and quad strength."},
+  {name:"Bulgarian Split Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"Yes",notes:"Rear foot elevated on bench. Weight in front leg. Lower the back knee toward the floor with control. Drive through front heel to return. Keep torso tall."},
+  {name:"DB Split Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"Yes",notes:"One foot slightly forward. Scoop pelvis for neutral spine. Keep weight in front leg as you lower both knees. Push through front heel to return. Slow is harder."},
+  {name:"DB Split Squat (RFE)",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"Yes",notes:"Rear foot elevated. One DB in each hand or goblet position. Keep weight through the front heel throughout. Lower with control, return with force."},
+  {name:"Lateral Lunge",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"Yes",notes:"Feet wide, toes out slightly. Feet static. Bend into one knee in a squat pattern — knee and ankle forward, hips back, springs neutral. Exhale to pull hips up quickly."},
+  {name:"Lateral Lunge (Plyo)",cat:"Lower Body — Squat",equip:"Bodyweight",uni:"Yes",notes:"Lateral lunge with an explosive push-off to return to center or switch sides. Land softly and absorb through the hip. Only add the plyo element when the base movement is solid."},
+  {name:"Heel Elevated Front Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"Bicep curl DBs into front of shoulders. Heels raised. Send hips back as you descend. Mini pause at the bottom before coming up — no bouncing. Focus on quality of movement."},
+  {name:"Pause DB Front Squat",cat:"Lower Body — Squat",equip:"Dumbbell",uni:"No",notes:"DBs bicep curled into shoulders. Slow descent to a steady pause at the bottom, then push to return. Inhale down, breathe at the bottom, exhale to push up."},
+  // LOWER BODY — HINGE
+  {name:"1.5 DB Hip Thrust",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Hip thrust as usual — all the way to the top, dip a little, then all the way back to the top. Come all the way down. That's one rep. DB/KB over hip bones."},
+  {name:"1.5 Glute Bridges",cat:"Lower Body — Hinge",equip:"Bodyweight",uni:"No",notes:"Drive all the way up, lower halfway, drive back to the top, then lower fully. Pull pubic bone to ribs throughout. Pull with heels to activate hamstrings."},
+  {name:"DB Glute Bridge (Floor)",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Bring feet in towards your bum as you lie down. DB over hip bones. Pull pubic bone towards ribs as you lift and lower hips. Pull with heels to activate hamstrings."},
+  {name:"Feet Elevated Glute Bridge",cat:"Lower Body — Hinge",equip:"Bodyweight",uni:"No",notes:"Heels on a raised surface. Drive hips up, squeeze glutes at the top. Keep ribs down and core engaged. Lower with control. Greater range of motion than floor version."},
+  {name:"Single Leg Glute Bridge",cat:"Lower Body — Hinge",equip:"Bodyweight",uni:"Yes",notes:"Normal glute bridge position, then one knee pulled in directly over the hip. Scoop pelvis, pull with the working heel, and drive hips up. Control the descent."},
+  {name:"GB Floor Press combo",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Hold glute bridge position throughout. DBs over shoulders, push them straight up. Keep hips elevated the entire time. Exhale to push, inhale to lower slowly."},
+  {name:"KB Hip Hinge",cat:"Lower Body — Hinge",equip:"Kettlebell",uni:"No",notes:"Think about your foot triangle — push through it to keep legs and hips active. Bend knees slightly and anchor them. Stretch hips back keeping spine neutral. Drive hips forward to return."},
+  {name:"Hip Hinge by Mirror → DB RDL",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Practice the hip hinge pattern by the mirror first — hands on springs to feel neutral spine. Then progress to holding DBs, painting thighs on the way down. Drive hips forward to return."},
+  {name:"KB RDL",cat:"Lower Body — Hinge",equip:"Kettlebell",uni:"No",notes:"Hold KB in both hands. Hinge from the hips, keeping the KB close to the body. Neutral spine throughout. Feel the stretch through the hamstrings, then drive hips forward to stand."},
+  {name:"BB RDL",cat:"Lower Body — Hinge",equip:"Barbell",uni:"No",notes:"Hold barbell at hips. Hinge back, keeping bar close to the legs. Neutral spine. Feel the hamstring stretch. Drive hips forward to return. Keep shoulder blades retracted."},
+  {name:"DB Romanian Deadlift",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Hold DBs in front of hips. Hinge back, keeping DBs close to the legs. Neutral spine throughout. Feel the hamstring stretch. Drive hips forward to stand tall."},
+  {name:"B-Stance Romanian Deadlift",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"Yes",notes:"One foot slightly behind as a kickstand — most weight through the front leg. Hinge from the hips. The split stance challenges balance and increases unilateral demand."},
+  {name:"Eccentric Phase RDL",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Take 3–5 seconds to lower the DBs, feeling maximum hamstring stretch. Drive up at normal speed. The slow eccentric builds strength and body awareness through the full range."},
+  {name:"Good Morning / Banded Deadlift",cat:"Lower Body — Hinge",equip:"Band",uni:"No",notes:"Band around hips or behind neck. Hinge at the hips with a neutral spine, feeling a stretch through the glutes and hamstrings. Drive hips forward to return to standing."},
+  {name:"Sumo Deadlift",cat:"Lower Body — Hinge",equip:"Kettlebell",uni:"No",notes:"Wide stance, toes out. KB between feet. Sit into the hip hinge, keeping chest up and spine neutral. Drive through the floor to stand, squeezing glutes at the top."},
+  {name:"DB Good Morning",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Hold DB at either end behind upper back. Send hips back as knees stay forwards over midfoot. Keep neutral spine. Focus on ease and quality — or just stick your bum back!"},
+  {name:"Pause DB Glute Bridge",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Bring feet in towards your bum. Pull pubic bone towards ribs as you lift hips. Pause for a full inhale and exhale at the top, squeezing. Then lower with control."},
+  {name:"DB Deadlift",cat:"Lower Body — Hinge",equip:"Dumbbell",uni:"No",notes:"Send hips back as you push through midfoot and keep knees level. Keep neutral spine — paint the thighs on the way down and up with the DBs. Drive to stand tall."},
+  {name:"Sliding Leg Curl (Eccentric)",cat:"Lower Body — Hinge",equip:"Bodyweight",uni:"No",notes:"Heels on towel, hips in bridge. Slowly slide heels away over 3–5 seconds, keeping hips up. Drop hips to reset — do not use hamstrings to curl back. Eccentric only."},
+  // LOWER BODY — LUNGE
+  {name:"Reverse Lunges",cat:"Lower Body — Lunge",equip:"Bodyweight",uni:"Yes",notes:"Keep weight in front leg throughout. Slow stretch as you step back, strong push through front heel to return. Step back to train tracks — horizontal space between feet."},
+  {name:"Reverse Lunges with Rotation",cat:"Lower Body — Lunge",equip:"Dumbbell",uni:"Yes",notes:"DB in goblet position. At the bottom of the lunge, rotate waist and torso (not hips) toward the back leg and return to centre. Keep tension in front leg throughout."},
+  {name:"DB Reverse Lunges",cat:"Lower Body — Lunge",equip:"Dumbbell",uni:"Yes",notes:"Hold DBs at sides or goblet position. Step back to train tracks. Keep weight through the front heel. Strong drive back up to standing. Continue same leg before switching."},
+  // LOWER BODY — OTHER
+  {name:"Calf Raises",cat:"Lower Body — Other",equip:"Bodyweight",uni:"No",notes:"Stand on edge of stairs, heels off the edge. Raise heels as high as possible, squeeze at top, pause. Slowly lower below the level of the step for a full stretch. Use banister lightly for balance."},
+  // UPPER BODY — PUSH
+  {name:"Press-ups at Counter / Incline",cat:"Upper Body — Push",equip:"Bodyweight",uni:"No",notes:"Hands on counter or incline surface. Body in one straight line — ribs and pubic bone drawing toward each other. Lower chest to the surface with control, push back to start."},
+  {name:"Torso Elevated Push-up / Knees Down Push-up",cat:"Upper Body — Push",equip:"Bodyweight",uni:"No",notes:"At the wall to begin, progress to counter. Keep body in one straight line. Let yourself in toward the wall/counter by bending elbows, then push to straight. Shoulders away from ears."},
+  {name:"Floor Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Lie on floor, DBs over front of shoulders, elbows a little out from ribs. Press DBs straight up to meet over shoulders. Control the descent all the way down."},
+  {name:"Alt Floor Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Similar to floor press but alternate arms. Keep the non-working arm steady. Focus on anti-rotation through the core as you press one side at a time."},
+  {name:"GB Floor Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Hold a glute bridge throughout — hips elevated, spine neutral. DBs over shoulders, push them straight up, rotating so ends meet at the top, then lower slowly. Keep hips up throughout."},
+  {name:"Single Arm DB Press (Floor)",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Lie on floor, one DB over the shoulder. Push straight up, rotating slightly at the top. Control the descent. Keep the opposite hand on the ribs to feel any unwanted movement."},
+  {name:"Standing Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Feet hip width. DBs at shoulder height, elbows at 45 degrees. Press straight overhead. Keep shoulders away from ears and head turtled back. Core supportive throughout."},
+  {name:"Single Arm Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"One DB at shoulder height. Press straight overhead. Opposite hand can go to side of ribs to monitor any lateral shift. Keep hips and ribs stacked throughout."},
+  {name:"Arnold Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DBs at shoulder height, wrists facing in. Press up while rotating wrists to face out at the top. Control weight slowly back down, rotating wrists back in. Full rotation each rep."},
+  {name:"Kneeling Arnold Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Kneeling in a lunge. DB in same hand as back leg. Inner wrist pulled tight to shoulder — push straight up overhead, turning wrist to face forward. Rotate back on the way down."},
+  {name:"Standing Arnold Single Shoulder Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Standing, one DB. Start with wrist facing in, press and rotate to face out at the top. Other hand can monitor ribs. Keep hips and ribs stacked throughout."},
+  {name:"DB Overhead Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DBs at shoulder height. Press straight overhead, keeping shoulders away from ears. Keep head back — don't let it poke forward. Lower with control to shoulder height."},
+  {name:"Kneeling Shoulder Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Kneeling lunge, tuck tailbone. DB in same hand as back leg. Elbow out at 45 degrees, DB close to shoulder. Push straight overhead. Other arm out for balance. Keep ribs stacked."},
+  {name:"Standing See-Saw Shoulder Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Both DBs at shoulder height. Press one up as the other lowers — alternating in a see-saw rhythm. Keep the movement controlled and shoulders away from ears throughout."},
+  {name:"Standing Overhead DB March → Push Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Feet hip width, small toe turn-out. Bend knees slightly then push up, driving DBs overhead at the top. Keep springs and a small glute squeeze to support lower back at the top."},
+  {name:"Kettlebell Push Press",cat:"Upper Body — Push",equip:"Kettlebell",uni:"No",notes:"KB at shoulder. Shallow knee bend, then explosively push it overhead. Lock out at the top. Lower with control. The leg drive allows you to press heavier than a strict press."},
+  {name:"Upright Row",cat:"Upper Body — Push",equip:"Dowel",uni:"No",notes:"Hold dowel or DBs with a narrow grip. Pull elbows high and wide as you raise the weight to chin height. Lower with control. Keep elbows above the wrists throughout."},
+  {name:"DB Upright Row",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Hold DBs in front of hips. Pull elbows high and wide, raising DBs to chin height. Elbows lead the movement. Lower with control. Keep shoulders relaxed at the top."},
+  {name:"Lateral Raise (Chicken Wing)",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DBs at sides. Raise arms out to shoulder height, leading with the elbows (chicken wing position — thumbs slightly down). Lower with control. Avoid shrugging."},
+  {name:"Lat Raises with Band",cat:"Upper Body — Push",equip:"Band",uni:"No",notes:"Band under feet or anchored. Raise arms out to shoulder height, leading with the elbows. The band adds increasing resistance through the range. Lower slowly."},
+  {name:"Tricep Extension",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DB held overhead or behind the head. Keep elbows pointing forward and close to the head. Extend to straighten the arms, lower with control. Only the forearms move."},
+  {name:"Z Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Seated on the floor with legs straight out. Press DBs overhead. No leg drive, no back support — pure shoulder and core stability. Keep ribs down and back tall throughout."},
+  {name:"DB Push Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DBs at shoulder height. Shallow squat to generate leg drive, then explosively press DBs overhead. Slow lower back to shoulders. The dip and drive allows heavier pressing."},
+  {name:"Standing Single Shoulder Press",cat:"Upper Body — Push",equip:"Dumbbell",uni:"Yes",notes:"Feet hip width. DB at shoulder height. Push straight up overhead, keeping hips and ribs stacked. Opposite hand can go to side of ribs to monitor movement. Control the return."},
+  {name:"Hammer Curl",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"DBs with ends facing up (neutral grip). Curl both in toward shoulders. Avoid locking out fully at the bottom. Keep elbows close to the body throughout."},
+  {name:"Overhead Tricep Extension",cat:"Upper Body — Push",equip:"Dumbbell",uni:"No",notes:"Both hands on one DB held above the head. Bend elbows to slowly lower weight behind head, keeping everything else steady. Extend back up with control. Elbows stay pointing forward."},
+  // UPPER BODY — PULL
+  {name:"Banded Pulldown",cat:"Upper Body — Pull",equip:"Band",uni:"No",notes:"Secure band around a pillar overhead. Pull down toward you, elbows bending and coming all the way back either side of the ribcage. Aim for smooth movement from the shoulder blades."},
+  {name:"Band Pull Aparts",cat:"Upper Body — Pull",equip:"Band",uni:"No",notes:"Hold band straight out in front at shoulder width. Pull apart until hands are behind and band touches across the chest. Keep wrists neutral and arms strong. Lift chest toward band a little."},
+  {name:"Banded Row",cat:"Upper Body — Pull",equip:"Band",uni:"No",notes:"Sit with legs straight, band around feet. Keep tension on band as you extend forward, then contract around shoulder blades to draw elbows all the way back. Can also be done standing with band through door handle."},
+  {name:"Banded Pause Row",cat:"Upper Body — Pull",equip:"Band",uni:"No",notes:"Same as banded row but pause for 1–2 seconds with elbows fully back, squeezing the shoulder blades together. The pause increases time under tension and improves posture muscles."},
+  {name:"All 4's Row",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"Yes",notes:"On all fours, DB directly below one shoulder. Draw elbow into side of ribcage using the muscles across the back of the shoulder. Quarter-circle arc from floor back toward hip. Stay level."},
+  {name:"3 Point Row / DB 3 Point Row",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"Yes",notes:"Hip hinge to place one hand on sofa in a tripod position. DB under your shoulder. Bend elbow and draw weight back toward hip, feeling inside arm graze ribs. Place back down with control."},
+  {name:"Bench Assisted DB Row",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"Yes",notes:"Knee and same hand on bench, weight evenly distributed. DB follows quarter-circle arc from under the front of the shoulder back to the hip. Keep inside of arm in toward ribs."},
+  {name:"Kneeling Row",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"Yes",notes:"Get steady and even on all fours with DB directly below one shoulder. Draw elbow into side of ribcage using the muscles across back of shoulder. Arc from floor toward hip. Stay level."},
+  {name:"Single Arm DB Row",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"Yes",notes:"Hinge forward with a flat back, one hand on a support. Pull the DB up toward the hip, keeping elbow close to the body. Lower with control. Avoid rotating the torso."},
+  {name:"Bicep Curl",cat:"Upper Body — Pull",equip:"Dumbbell",uni:"No",notes:"DBs at sides, palms forward. Curl toward shoulders, keeping elbows close to the body. Lower with control — avoid locking out at the bottom. Squeeze at the top."},
+  // CORE
+  {name:"Weighted Deadbug",cat:"Core",equip:"Dumbbell",uni:"Yes",notes:"Lie down, both knees lifted over hips. Do a pullover then as you lower weight back, keeping torso stable, take one leg away keeping it bent and toe tap the floor. Bring both back together. Alternate legs. Quality over quantity."},
+  {name:"Deadbug",cat:"Core",equip:"Bodyweight",uni:"Yes",notes:"Arms above shoulders, knees bent above hips. Lower opposite arm and leg toward the floor, keeping the back stable and natural curves consistent. Inhale to lengthen away, exhale to return."},
+  {name:"Dead Bug Slide Out",cat:"Core",equip:"Bodyweight",uni:"Yes",notes:"Arms above shoulders, knees bent above hips. Slide one heel away along the floor while keeping the back stable. Return and alternate. Keep ribs gently contained throughout."},
+  {name:"Pullovers / Dead Bug combo",cat:"Core",equip:"Dumbbell",uni:"No",notes:"Combine a DB pullover with dead bug legs. As the weight lowers behind the head, lower one leg away. Return both simultaneously. Demands strong core stability throughout."},
+  {name:"DB Pullover",cat:"Core",equip:"Dumbbell",uni:"No",notes:"Lie down, feet flat on floor, knees bent. Hold one DB between both hands. Slowly lower from straight over the shoulders down behind you to the floor, keeping elbows straight and ribs down. Draw DB back up to start."},
+  {name:"Plate Pullover",cat:"Core",equip:"Weight plate",uni:"No",notes:"Same as DB pullover but holding a weight plate. Slightly different grip challenge. Keep elbows straight and ribs down throughout. Slow and controlled in both directions."},
+  {name:"Side Plank",cat:"Core",equip:"Bodyweight",uni:"Yes",notes:"Elbow underneath shoulder, palm up. Press down through elbow to lift everything up. Tuck tailbone in, keep whole body engaged evenly. Bottom knee down to begin. Hold for breaths rather than seconds."},
+  {name:"Side Plank Dips",cat:"Core",equip:"Bodyweight",uni:"Yes",notes:"From a side plank position, lower the hip toward the floor and drive it back up. Keep the movement controlled and the body in alignment. Breathe steadily throughout."},
+  {name:"Anti-Rotation Plank",cat:"Core",equip:"Bodyweight",uni:"No",notes:"Hold a plank or side plank position while resisting any rotation. Can use a band for added resistance. The challenge is maintaining stillness against a rotational force."},
+  {name:"Anti-Rotation Forearm Plank",cat:"Core",equip:"Bodyweight",uni:"No",notes:"Forearm plank with one arm extended, resisting any rotation. Keep hips level and body in one straight line. Breathe steadily without tensing jaw or neck."},
+  {name:"Forearm Plank",cat:"Core",equip:"Bodyweight",uni:"No",notes:"Elbows underneath shoulders, push tailbone back and under, push back through heels. Hold for steady breaths. Try to avoid tensing jaw and shoulders — find ease within the work."},
+  {name:"Bear Plank",cat:"Core",equip:"Bodyweight",uni:"No",notes:"Come to all fours, spine neutral. Push down through hands and feet and lift knees just a few centimetres from the floor. Hover and hold. Watch for the middle back pushing up."},
+  {name:"Bird Dog (core)",cat:"Core",equip:"Bodyweight",uni:"Yes",notes:"From all fours, extend opposite arm and leg, trying to avoid any lateral shift in the hips. Imagine drawing palms back into shoulder blades and knees into hip sockets. Slow and deliberate."},
+  {name:"DB Glute Bridge Floor Press (combo)",cat:"Core",equip:"Dumbbell",uni:"No",notes:"Come up into glute bridge, DBs over shoulders with elbows at 45 degrees. Stay in the bridge throughout. Push DBs straight up, rotating so ends meet at the top, then lower slowly. Keep hips elevated."},
+  // GLUTES / REHAB
+  {name:"Clamshells",cat:"Glutes / Rehab",equip:"Bodyweight",uni:"Yes",notes:"Lie on your side, hips and shoulders stacked, knees bent at 90 degrees slightly forward of hips. Keeping feet together, slowly lift the top knee toward the ceiling. Pause and squeeze at the top, then lower slowly."},
+  {name:"Internal Isometric",cat:"Glutes / Rehab",equip:"Doorframe",uni:"Yes",notes:"Stand in a doorframe and press the inside of one foot or knee against the frame, creating an isometric contraction of the internal rotators. Hold for time. Keep the rest of the body still."},
+  {name:"External Isometric",cat:"Glutes / Rehab",equip:"Doorframe",uni:"Yes",notes:"Stand in a doorframe and press the outside of one foot or knee against the frame, creating an isometric contraction of the external rotators (glutes). Hold for time. Keep the body still."},
+  // CARRIES / LOADED MOVEMENT
+  {name:"Overhead / Farmer's March",cat:"Carries / Loaded Movement",equip:"Dowel",uni:"No",notes:"Take dowel overhead with grip as wide as needed — don't let shoulders shrug. Draw one knee up toward ribs, replace, switch sides. Eliminate lateral movement as much as possible. Progress to DBs held at sides."},
+  {name:"DB Landmine Rotation",cat:"Carries / Loaded Movement",equip:"Dumbbell",uni:"Yes",notes:"Hold DB at one end, rotate from side to side through the hips and core. Control the movement — this is not a swing. Keep the spine tall and the core engaged throughout."},
+  {name:"Windmill",cat:"Carries / Loaded Movement",equip:"Dumbbell",uni:"Yes",notes:"Feet wide, DB pressed overhead. Hinge toward the opposite foot, keeping the top arm vertical and eyes on the weight. Feel the rotation and side flexion. Return with control."},
+  {name:"DB Diagonal Lift",cat:"Carries / Loaded Movement",equip:"Dumbbell",uni:"Yes",notes:"Hold DB at either end, down by hip. Swing DB up and across diagonally over the opposite shoulder in a controlled movement, allowing a small-moderate hip rotation. Control the return along the same path."},
+];
+
+const CAT_ORDER = [
+  "Warm-Up / Mobility","Lower Body — Squat","Lower Body — Hinge",
+  "Lower Body — Lunge","Lower Body — Other","Upper Body — Push",
+  "Upper Body — Pull","Core","Glutes / Rehab","Carries / Loaded Movement"
+];
+
+/* ── STATE ── */
+// Plan = { id, client, title, groups: [ { id, rounds, restBetweenRounds, exercises: [ { id, name, cat, equip, uni, reps, restAfter, notes, breathTempo } ] } ] }
+let currentPlan = {id:null,client:'',title:'',groups:[]};
+let dirty = false;
+function markDirty(){ dirty=true; }
+
+/* ── VIEWS ── */
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nav-tab')[{db:0,builder:1,plans:2}[v]].classList.add('active');
+  if(v==='db') renderDB();
+  if(v==='builder') renderBuilderList();
+  if(v==='plans') renderPlans();
+}
+
+/* ── DATABASE ── */
+function renderDB(){
+  const q = document.getElementById('db-search').value.toLowerCase();
+  const cat = document.getElementById('db-category').value;
+  const equip = document.getElementById('db-equip').value;
+  const uni = document.getElementById('db-uni').value;
+  const filtered = EXERCISES.filter(e=>{
+    if(q && !e.name.toLowerCase().includes(q) && !e.cat.toLowerCase().includes(q)) return false;
+    if(cat && e.cat!==cat) return false;
+    if(equip && e.equip!==equip) return false;
+    if(uni && e.uni!==uni) return false;
+    return true;
+  });
+  document.getElementById('db-count').textContent = filtered.length+' exercise'+(filtered.length!==1?'s':'');
+  const grouped={};
+  filtered.forEach(e=>{ if(!grouped[e.cat]) grouped[e.cat]=[]; grouped[e.cat].push(e); });
+  let html='';
+  CAT_ORDER.forEach(cat=>{
+    if(!grouped[cat]||!grouped[cat].length) return;
+    html+=`<div class="category-section"><div class="category-header">${cat}</div><div class="exercise-grid">`;
+    grouped[cat].forEach(e=>{
+      const idx = EXERCISES.indexOf(e);
+      html+=`<div class="exercise-card" onclick="addAsNewGroupByIdx(${idx})">
+        <div class="exercise-name">${e.name}</div>
+        <div class="exercise-meta">
+          <span class="tag tag-equip">${e.equip}</span>
+          <span class="tag ${e.uni==='Yes'?'tag-uni':'tag-bi'}">${e.uni==='Yes'?'Unilateral':'Bilateral'}</span>
+        </div>
+        <button class="card-add-btn" title="Add as new superset" onclick="event.stopPropagation();addAsNewGroupByIdx(${idx})">+</button>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  if(!html) html='<div style="text-align:center;padding:48px;color:var(--mid);font-style:italic">No exercises match your filters.</div>';
+  document.getElementById('db-results').innerHTML=html;
+}
+
+/* ── BUILDER LIST ── */
+function renderBuilderList(){
+  const q = document.getElementById('b-search').value.toLowerCase();
+  const cat = document.getElementById('b-cat').value;
+  const equip = document.getElementById('b-equip').value;
+  const filtered = EXERCISES.filter(e=>{
+    if(q && !e.name.toLowerCase().includes(q)) return false;
+    if(cat && e.cat!==cat) return false;
+    if(equip && e.equip!==equip) return false;
+    return true;
+  });
+  const hasGroups = currentPlan.groups.length>0;
+  let html = filtered.map(e=>{
+    const idx = EXERCISES.indexOf(e);
+    return `<div class="mini-exercise-item">
+      <div class="ex-info">
+        <div>${e.name}</div>
+        <span>${e.cat} · ${e.equip}</span>
+      </div>
+      <div class="mini-add-group">
+        <button class="mini-add mini-add-new" onclick="addAsNewGroupByIdx(${idx})" title="Start a new superset group">New group</button>
+        ${hasGroups?`<button class="mini-add mini-add-existing" onclick="addToLastGroupByIdx(${idx})" title="Add to last superset group">Add to last</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  if(!html) html='<div style="text-align:center;padding:20px;color:var(--mid);font-size:.83rem;font-style:italic">No results</div>';
+  document.getElementById('builder-list').innerHTML=html;
+}
+
+/* ── SUPERSET LOGIC ── */
+function makeExercise(ex){
+  return {
+    id: Date.now()+Math.random(),
+    name: ex.name, cat: ex.cat, equip: ex.equip, uni: ex.uni,
+    reps:'', restAfter:'', notes: ex.notes||'', breathTempo:''
+  };
+}
+
+function addAsNewGroupByIdx(idx){ addAsNewGroup(EXERCISES[idx]); }
+function addToLastGroupByIdx(idx){ addToLastGroup(EXERCISES[idx]); }
+
+function addAsNewGroup(ex){
+  switchView('builder');
+  currentPlan.groups.push({
+    id: Date.now()+Math.random(),
+    rounds:'2', restBetweenRounds:'90',
+    exercises:[makeExercise(ex)]
+  });
+  markDirty();
+  renderPlanGroups();
+  renderBuilderList();
+  showToast(ex.name+' added as new group','success');
+}
+
+function addToLastGroup(ex){
+  if(!currentPlan.groups.length){ addAsNewGroup(ex); return; }
+  currentPlan.groups[currentPlan.groups.length-1].exercises.push(makeExercise(ex));
+  markDirty();
+  renderPlanGroups();
+  renderBuilderList();
+  showToast(ex.name+' added to group '+getLetter(currentPlan.groups.length-1),'success');
+}
+
+function getLetter(idx){ return String.fromCharCode(65+idx); }
+
+function updateGroup(gid, field, val){
+  const g = currentPlan.groups.find(g=>g.id===gid);
+  if(g){ g[field]=val; markDirty(); }
+}
+function updateGroupEx(gid, eid, field, val){
+  const g = currentPlan.groups.find(g=>g.id===gid);
+  if(!g) return;
+  const e = g.exercises.find(e=>e.id===eid);
+  if(e){ e[field]=val; markDirty(); }
+}
+function removeGroup(gid){
+  currentPlan.groups = currentPlan.groups.filter(g=>g.id!==gid);
+  markDirty(); renderPlanGroups(); renderBuilderList();
+}
+function removeGroupEx(gid, eid){
+  const g = currentPlan.groups.find(g=>g.id===gid);
+  if(!g) return;
+  g.exercises = g.exercises.filter(e=>e.id!==eid);
+  if(!g.exercises.length) currentPlan.groups = currentPlan.groups.filter(g2=>g2.id!==gid);
+  markDirty(); renderPlanGroups(); renderBuilderList();
+}
+
+/* ── RENDER PLAN ── */
+function renderPlanGroups(){
+  const container = document.getElementById('plan-groups');
+  if(!currentPlan.groups.length){
+    container.innerHTML='<div class="plan-empty">Add exercises from the left panel to build your plan</div>';
+    return;
+  }
+  container.innerHTML = currentPlan.groups.map((g,gi)=>{
+    const letter = getLetter(gi);
+    const exHtml = g.exercises.map((ex,ei)=>{
+      const label = letter+(ei+1);
+      return `<div class="group-exercise">
+        <div class="gex-header">
+          <span class="gex-label">${label}</span>
+          <span class="gex-name">${ex.name}</span>
+          <span class="gex-equip">${ex.equip} · ${ex.uni==='Yes'?'Unilateral':'Bilateral'}</span>
+          <button class="gex-remove" onclick="removeGroupEx(${g.id},${ex.id})" title="Remove">✕</button>
+        </div>
+        <div class="gex-body">
+          <div class="gex-field">
+            <label>Reps</label>
+            <input type="text" value="${ex.reps||''}" placeholder="e.g. 8–12 ES" oninput="updateGroupEx(${g.id},${ex.id},'reps',this.value)">
+          </div>
+          <div class="gex-field">
+            <label>Rest after (s)</label>
+            <input type="text" value="${ex.restAfter||''}" placeholder="e.g. 30" oninput="updateGroupEx(${g.id},${ex.id},'restAfter',this.value)">
+          </div>
+          <div class="gex-field gex-full">
+            <label>Notes</label>
+            <textarea oninput="updateGroupEx(${g.id},${ex.id},'notes',this.value)">${ex.notes||''}</textarea>
+          </div>
+          <div class="gex-field gex-full">
+            <label>Breath &amp; Tempo</label>
+            <textarea placeholder="e.g. Inhale to lower, exhale to drive up…" oninput="updateGroupEx(${g.id},${ex.id},'breathTempo',this.value)">${ex.breathTempo||''}</textarea>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="superset-group" data-gid="${g.id}">
+      <div class="group-header">
+        <span class="group-letter">${letter}</span>
+        <div class="group-controls">
+          <div class="group-ctrl">
+            <label>Rounds</label>
+            <input type="text" value="${g.rounds||''}" placeholder="2" oninput="updateGroup(${g.id},'rounds',this.value)">
+          </div>
+          <div class="group-ctrl">
+            <label>Rest between rounds (s)</label>
+            <input type="text" value="${g.restBetweenRounds||''}" placeholder="90" oninput="updateGroup(${g.id},'restBetweenRounds',this.value)" style="width:80px">
+          </div>
+        </div>
+        <button class="group-remove" onclick="removeGroup(${g.id})" title="Remove group">✕ Remove group</button>
+      </div>
+      <div class="group-exercises">${exHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function syncMeta(){
+  currentPlan.client = document.getElementById('plan-client').value;
+  currentPlan.title = document.getElementById('plan-title').value;
+}
+
+/* ── SAVE / LOAD ── */
+function getPlans(){ try{ return JSON.parse(localStorage.getItem('pt-plans')||'[]'); }catch{ return []; } }
+function setPlans(p){ localStorage.setItem('pt-plans',JSON.stringify(p)); }
+
+function savePlan(){
+  syncMeta();
+  if(!currentPlan.title.trim()){ showToast('Please enter a plan title','error'); return; }
+  const plans = getPlans();
+  const now = new Date().toISOString();
+  if(currentPlan.id){
+    const idx = plans.findIndex(p=>p.id===currentPlan.id);
+    if(idx>-1) plans[idx]={...currentPlan,updatedAt:now};
+    else plans.unshift({...currentPlan,updatedAt:now,createdAt:now});
+  } else {
+    currentPlan.id = Date.now().toString();
+    plans.unshift({...currentPlan,createdAt:now,updatedAt:now});
+  }
+  setPlans(plans); dirty=false;
+  document.getElementById('builder-plan-label').textContent = currentPlan.title||'Plan';
+  showToast('Plan saved ✓','success');
+}
+
+function loadPlan(id){
+  if(dirty && !confirm('You have unsaved changes. Discard?')) return;
+  const plan = getPlans().find(p=>p.id===id);
+  if(!plan) return;
+  currentPlan = JSON.parse(JSON.stringify(plan));
+  document.getElementById('plan-client').value = currentPlan.client||'';
+  document.getElementById('plan-title').value = currentPlan.title||'';
+  document.getElementById('builder-plan-label').textContent = currentPlan.title||'Plan';
+  dirty=false; switchView('builder'); renderPlanGroups(); renderBuilderList();
+}
+
+function deletePlan(id){
+  if(!confirm('Delete this plan? This cannot be undone.')) return;
+  setPlans(getPlans().filter(p=>p.id!==id));
+  if(currentPlan.id===id) newPlan();
+  renderPlans(); showToast('Plan deleted','error');
+}
+
+function newPlan(){
+  if(dirty && !confirm('You have unsaved changes. Discard?')) return;
+  currentPlan={id:null,client:'',title:'',groups:[]};
+  document.getElementById('plan-client').value='';
+  document.getElementById('plan-title').value='';
+  document.getElementById('builder-plan-label').textContent='New Plan';
+  dirty=false; renderPlanGroups(); renderBuilderList();
+}
+
+function clearPlan(){
+  if(!currentPlan.groups.length) return;
+  if(!confirm('Remove all exercises from the current plan?')) return;
+  currentPlan.groups=[]; markDirty(); renderPlanGroups(); renderBuilderList();
+}
+
+/* ── SAVED PLANS VIEW ── */
+function renderPlans(){
+  const plans = getPlans();
+  if(!plans.length){
+    document.getElementById('plans-container').innerHTML='<div class="no-plans">No saved plans yet — build one in the Plan Builder tab.</div>';
+    return;
+  }
+  const totalEx = p => (p.groups||[]).reduce((a,g)=>a+g.exercises.length,0);
+  document.getElementById('plans-container').innerHTML='<div class="plans-grid">'+plans.map(p=>{
+    const date = p.updatedAt?new Date(p.updatedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+    const gs = (p.groups||[]).length;
+    const exs = totalEx(p);
+    return `<div class="plan-card">
+      <div class="plan-card-title">${p.title||'Untitled Plan'}</div>
+      <div class="plan-card-client">${p.client?'👤 '+p.client:'No client assigned'}</div>
+      <div class="plan-card-meta">
+        <span>📋 ${gs} superset${gs!==1?'s':''} · ${exs} exercise${exs!==1?'s':''}</span>
+        ${date?`<span>Updated ${date}</span>`:''}
+      </div>
+      <div class="plan-card-actions">
+        <button class="btn-sm btn-sm-primary" onclick="loadPlan('${p.id}')">✏️ Edit</button>
+        <button class="btn-sm btn-sm-green" onclick="printPlanById('${p.id}')">🖨 Print</button>
+        <button class="btn-sm btn-sm-danger" onclick="deletePlan('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+/* ── PRINT ── */
+function printPlanById(id){ const p=getPlans().find(p=>p.id===id); if(p) doPrint(p); }
+function printPlan(){ syncMeta(); if(!currentPlan.groups.length){showToast('Add exercises before printing','error');return;} doPrint(currentPlan); }
+
+function doPrint(plan){
+  const date = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const groupsHtml = (plan.groups||[]).map((g,gi)=>{
+    const letter = getLetter(gi);
+    const exRows = g.exercises.map((ex,ei)=>`
+      <div class="pe">
+        <div class="pe-header">
+          <span class="pe-label">${letter}${ei+1}</span>
+          <div>
+            <div class="pe-name">${ex.name}</div>
+            <span class="pe-sub">${ex.equip} · ${ex.uni==='Yes'?'Unilateral':'Bilateral'}</span>
+          </div>
+        </div>
+        <div class="pe-body">
+          <div class="pe-cell">
+            <label>Reps</label>
+            <div class="val">${ex.reps||'—'}</div>
+          </div>
+          <div class="pe-cell">
+            <label>Rest after</label>
+            <div class="val">${ex.restAfter?ex.restAfter+'s':'—'}</div>
+          </div>
+          <div class="pe-cell">
+            <label>&nbsp;</label>
+            <div class="val"></div>
+          </div>
+          <div class="pe-cell pe-notes">
+            <label>Notes</label>
+            <div>${ex.notes||''}</div>
+          </div>
+          <div class="pe-cell pe-breath">
+            <label>Breath &amp; Tempo</label>
+            <div>${ex.breathTempo||''}</div>
+          </div>
+        </div>
+      </div>`).join('');
+    return `<div class="pg">
+      <div class="pg-header">
+        <span class="pg-letter">${letter}</span>
+        <div class="pg-meta">
+          <b>${g.rounds||'?'} rounds</b> &nbsp;·&nbsp; Rest between rounds: <b>${g.restBetweenRounds?g.restBetweenRounds+'s':'—'}</b>
+        </div>
+      </div>
+      ${exRows}
+    </div>`;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML=`
+    <div class="pw">
+      <div class="ph">
+        <div class="ph-eyebrow">PT Plan Builder</div>
+        <div class="ph-title">${plan.title||'Workout Plan'}</div>
+        ${plan.client?`<div class="ph-client">Client: ${plan.client}</div>`:''}
+        <div class="ph-date">${date}</div>
+      </div>
+      ${groupsHtml}
+    </div>`;
+  window.print();
+}
+
+/* ── IMPORT / EXPORT ── */
+function exportData(){
+  const plans=getPlans();
+  if(!plans.length){showToast('No plans to export','error');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(plans,null,2)],{type:'application/json'}));
+  a.download='pt-plans-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  showToast('Plans exported ✓','success');
+}
+function importData(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const imp=JSON.parse(ev.target.result);
+      if(!Array.isArray(imp)) throw new Error();
+      const ex=getPlans(); const ids=new Set(ex.map(p=>p.id));
+      let added=0; imp.forEach(p=>{ if(!ids.has(p.id)){ex.unshift(p);added++;} });
+      setPlans(ex);
+      showToast(`Imported ${added} plan${added!==1?'s':''}  ✓`,'success');
+      renderPlans();
+    }catch{showToast('Import failed — invalid file','error');}
+  };
+  r.readAsText(file); e.target.value='';
+}
+
+/* ── TOAST ── */
+let toastTimer;
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ── INIT ── */
+renderDB();
+renderBuilderList();
+</script>
+</body>
+</html>
